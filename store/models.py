@@ -28,3 +28,4 @@ class Order(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)  # Order-specific price
+    is_paid = models.BooleanField(default=False) # <-- NEW FIELD

@@ -10,7 +10,9 @@ import ProductGrid from './LayoutComponents/ProductGrid';
 import CartDrawer from './LayoutComponents/CartDrawer';
 import AuthModal from './LayoutComponents/AuthModal';
 import FlyingItem from './LayoutComponents/FlyingItem';
-import AdminPanel from './LayoutComponents/AdminPanel'; // New Import
+import AdminPanel from './LayoutComponents/AdminPanel'; 
+import { PaymentTab } from './LayoutComponents/PaymentTab'; // <-- NEW IMPORT
+import { Invoice } from './LayoutComponents/Invoice';       // <-- NEW IMPORT
 
 interface FlyingItemData { id: number; x: number; y: number; img: string; }
 
@@ -25,6 +27,9 @@ const Store: React.FC = () => {
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [flyingItems, setFlyingItems] = useState<FlyingItemData[]>([]); 
+
+    // --- Checkout Flow State (NEW) ---
+    const [checkoutState, setCheckoutState] = useState<'shopping' | 'payment' | 'invoice'>('shopping');
 
     // --- Auth State ---
     const [loggedInCustomer, setLoggedInCustomer] = useState<Customer | null>(null);
@@ -99,23 +104,48 @@ const Store: React.FC = () => {
         });
     };
 
-    const handleCheckout = async () => {
+    // --- NEW CHECKOUT FLOW HANDLERS ---
+    
+    // 1. User clicks "Place Order" in the cart
+    const handleInitiateCheckout = () => {
         if (!loggedInCustomer) { setIsAuthModalOpen(true); return; }
+        setIsCartOpen(false); // Close cart drawer
+        setCheckoutState('payment'); // Open payment tab
+    };
+
+    // 2. User successfully pays via the Payment Tab
+    const handlePaymentSuccess = async () => {
         try {
             await Promise.all(cart.map(item => orderAPI.addOrder({
-                customerid: loggedInCustomer.customerid!, 
+                customerid: loggedInCustomer!.customerid!, 
                 productid: item.product.productid!,
                 quantity: item.quantity,
-                price: Number(item.product.price) * item.quantity 
+                price: Number(item.product.price) * item.quantity,
+                is_paid: true // Tells the database it is paid
             })));
-            alert("Order placed!");
-            setCart([]); setIsCartOpen(false); 
-        } catch (err) { alert("Checkout failed."); }
+            setCheckoutState('invoice'); // Show the receipt
+        } catch (err) { 
+            alert("Failed to process order on the server."); 
+            setCheckoutState('shopping');
+        }
+    };
+
+    // 3. User closes the invoice
+    const handleCloseInvoice = () => {
+        setCart([]); // Empty the cart only after they close the receipt
+        setCheckoutState('shopping');
     };
 
     const cartTotal = cart.reduce((sum, item) => sum + (Number(item.product.price) * item.quantity), 0);
     const cartItemCount = cart.reduce((count, item) => count + item.quantity, 0);
     const filteredProducts = products.filter(p => p.productname.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    // Map cart items into the format the Invoice component expects
+    const invoiceItems = cart.map(item => ({
+        name: item.product.productname,
+        quantity: item.quantity,
+        price: Number(item.product.price)
+    }));
 
     return (
         <div className="min-h-screen w-full bg-slate-50 flex justify-center overflow-x-hidden relative font-sans">
@@ -149,15 +179,50 @@ const Store: React.FC = () => {
                 />
             ))}
 
+            {/* Cart Drawer Overlay */}
             <AnimatePresence>
                 {isCartOpen && (
                     <CartDrawer 
                         cart={cart} onClose={() => setIsCartOpen(false)} onRemove={(id) => setCart(prev => prev.filter(i => i.product.productid !== id))}
-                        total={cartTotal} loggedInCustomer={loggedInCustomer} onCheckout={handleCheckout} onOpenAuth={() => { setIsCartOpen(false); setIsAuthModalOpen(true); }}
+                        total={cartTotal} loggedInCustomer={loggedInCustomer} 
+                        onCheckout={handleInitiateCheckout} // <-- Updated to trigger payment flow
+                        onOpenAuth={() => { setIsCartOpen(false); setIsAuthModalOpen(true); }}
                     />
                 )}
             </AnimatePresence>
 
+            {/* Payment Modal Overlay */}
+            {checkoutState === 'payment' && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex justify-center items-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl relative w-full max-w-md">
+                        <button 
+                            onClick={() => { setCheckoutState('shopping'); setIsCartOpen(true); }} 
+                            className="absolute top-4 left-4 text-slate-500 hover:text-slate-800 font-bold z-10"
+                        >
+                            &larr; Back to Cart
+                        </button>
+                        <div className="pt-8">
+                            <PaymentTab subtotal={cartTotal} onPaymentSuccess={handlePaymentSuccess} />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Invoice Modal Overlay */}
+            {checkoutState === 'invoice' && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex justify-center items-start pt-10 p-4 overflow-y-auto">
+                    <div className="w-full max-w-2xl relative">
+                        <Invoice 
+                            items={invoiceItems}
+                            customerName={loggedInCustomer?.name}
+                            subtotal={cartTotal}
+                            onReset={handleCloseInvoice}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Auth Modal Overlay */}
             {isAuthModalOpen && (
                 <AuthModal 
                     authMode={authMode} setAuthMode={setAuthMode} onClose={() => setIsAuthModalOpen(false)} isLoading={isLoadingAuth}

@@ -66,7 +66,7 @@ const ManageProducts: React.FC<Props> = ({ products, refresh }) => {
                                 <td className="py-4 px-6 text-center flex justify-center gap-2">
                                     {editingId === p.productid ? (
                                         <>
-                                            <button onClick={() => handleSave(p.productid)} className="bg-green-500 text-white px-3 py-1 rounded-lg font-bold">Save</button>
+                                            <button onClick={() => handleSave(p.productid!)} className="bg-green-500 text-white px-3 py-1 rounded-lg font-bold">Save</button>
                                             <button onClick={() => setEditingId(null)} className="bg-gray-400 text-white px-3 py-1 rounded-lg font-bold">Cancel</button>
                                         </>
                                     ) : (

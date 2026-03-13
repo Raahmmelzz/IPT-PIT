@@ -10,6 +10,7 @@ export interface Customer {
 }
 
 export interface Product {
+    imageurl: string;
     productid?: number;
     productname: string;
     price: string | number; // APIs often return DecimalField as a string
@@ -17,9 +18,10 @@ export interface Product {
 
 export interface Order {
     orderid?: number; 
-    customerid: number; // Flat ID linking to Customer
-    productid: number;  // Flat ID linking to Product
+    customerid: number; 
+    productid: number;  
     date?: string;
     quantity: number;
     price: string | number; 
+    is_paid?: boolean; // <-- NEW FIELD
 }
