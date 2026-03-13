@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Order, Customer, Product } from './types';
 import { orderAPI, customerAPI, productAPI } from './api';
-import { Invoice } from './LayoutComponents/Invoice'; // Ensure this path is correct
+import { Invoice } from './LayoutComponents/Invoice'; 
 
 const ManageOrders: React.FC = () => {
     const [orders, setOrders] = useState<Order[]>([]);
@@ -9,8 +9,7 @@ const ManageOrders: React.FC = () => {
     const [products, setProducts] = useState<Product[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // State to handle which invoice is currently being viewed
-    const [viewingInvoiceForOrder, setViewingInvoiceForOrder] = useState<Order | null>(null);
+    const [viewingInvoice, setViewingInvoice] = useState<{group: Order[], invoiceNumber: number} | null>(null);
 
     const loadData = async () => {
         try {
@@ -19,65 +18,82 @@ const ManageOrders: React.FC = () => {
                 customerAPI.getCustomers(),
                 productAPI.getProducts()
             ]);
-            
             setOrders(ordersRes.data);
             setCustomers(customersRes.data);
             setProducts(productsRes.data);
-        } catch (err) {
-            console.error("Error loading order data:", err);
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (err) { console.error("Error loading order data:", err); } 
+        finally { setIsLoading(false); }
     };
 
     useEffect(() => { loadData(); }, []);
-
-    const handleDelete = async (id: number) => {
-        if (confirm("Are you sure you want to delete this order record?")) {
-            try {
-                await orderAPI.deleteOrder(id);
-                loadData(); 
-            } catch (err) {
-                console.error("Error deleting order:", err);
-                alert("Failed to delete order.");
-            }
-        }
-    };
 
     const getCustomerName = (id: number) => {
         const customer = customers.find(c => c.customerid === id);
         return customer ? customer.name : `Unknown ID: ${id}`;
     };
 
-    const getProduct = (id: number) => {
-        return products.find(p => p.productid === id);
+    const getProduct = (id: number) => products.find(p => p.productid === id);
+
+    const getGroupedOrders = () => {
+        const groups: Order[][] = [];
+        
+        // Sort oldest first, so the earliest order is always #1
+        const sortedOrders = [...orders].sort((a, b) => (a.orderid || 0) - (b.orderid || 0));
+
+        sortedOrders.forEach(order => {
+            const existingGroup = groups.find(group => {
+                if (group[0].customerid !== order.customerid || group[0].is_paid !== order.is_paid) return false;
+                if (group[0].date && order.date) {
+                    const timeDiff = Math.abs(new Date(group[0].date).getTime() - new Date(order.date).getTime());
+                    return timeDiff <= 2000; 
+                }
+                return false;
+            });
+
+            if (existingGroup) existingGroup.push(order);
+            else groups.push([order]);
+        });
+        
+        return groups;
     };
 
-    if (isLoading) {
-        return <div className="text-center py-10 text-slate-500 font-bold">Loading order data...</div>;
-    }
+    const handleDeleteGroup = async (group: Order[]) => {
+        if (confirm(`Are you sure you want to delete this order?`)) {
+            try {
+                await Promise.all(group.map(o => orderAPI.deleteOrder(o.orderid!)));
+                loadData(); 
+            } catch (err) { alert("Failed to delete the order."); }
+        }
+    };
+
+    if (isLoading) return <div className="text-center py-10 text-slate-500 font-bold">Loading order data...</div>;
+
+    const groupedCheckouts = getGroupedOrders();
 
     // RENDER INVOICE MODAL
-    if (viewingInvoiceForOrder) {
-        const product = getProduct(viewingInvoiceForOrder.productid);
-        const invoiceItems = [{
-            name: product?.productname || "Unknown Item",
-            quantity: viewingInvoiceForOrder.quantity,
-            price: Number(viewingInvoiceForOrder.price) / viewingInvoiceForOrder.quantity // Calculate price per unit
-        }];
+    if (viewingInvoice && viewingInvoice.group.length > 0) {
+        const invoiceItems = viewingInvoice.group.map(o => {
+            const product = getProduct(o.productid);
+            return {
+                name: product?.productname || "Unknown Item",
+                quantity: o.quantity,
+                price: Number(o.price) / o.quantity
+            };
+        });
         
-        // Since we are looking at an already saved total price, we need to calculate the subtotal backwards
-        const total = Number(viewingInvoiceForOrder.price);
+        const total = viewingInvoice.group.reduce((sum, o) => sum + Number(o.price), 0);
         const subtotal = total / 1.12;
 
         return (
-            <div className="fixed inset-0 z-[70] bg-slate-900/50 flex justify-center items-start pt-10 p-4 overflow-y-auto">
+            <div className="fixed inset-0 z-[70] bg-slate-50 flex justify-center items-start pt-10 p-4 overflow-y-auto">
                 <div className="w-full max-w-2xl relative">
                     <Invoice 
                         items={invoiceItems}
-                        customerName={getCustomerName(viewingInvoiceForOrder.customerid)}
+                        customerName={getCustomerName(viewingInvoice.group[0].customerid)}
                         subtotal={subtotal}
-                        onReset={() => setViewingInvoiceForOrder(null)}
+                        invoiceNumber={viewingInvoice.invoiceNumber}
+                        paymentMethod={viewingInvoice.group[0].payment_method || 'Online'}
+                        onReset={() => setViewingInvoice(null)}
                     />
                 </div>
             </div>
@@ -93,9 +109,9 @@ const ManageOrders: React.FC = () => {
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-slate-50 text-slate-600 uppercase text-sm leading-normal">
-                            <th className="py-3 px-6 font-bold">Order ID</th>
+                            <th className="py-3 px-6 font-bold">Order Ref #</th>
                             <th className="py-3 px-6 font-bold">Customer Name</th>
-                            <th className="py-3 px-6 font-bold">Product Item</th>
+                            <th className="py-3 px-6 font-bold">Items Purchased</th>
                             <th className="py-3 px-6 font-bold text-center">Qty</th>
                             <th className="py-3 px-6 font-bold">Total Price</th>
                             <th className="py-3 px-6 font-bold text-center">Status</th>
@@ -103,50 +119,56 @@ const ManageOrders: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="text-slate-700 text-sm font-light">
-                        {orders.map(o => (
-                            <tr key={o.orderid} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                                <td className="py-4 px-6 font-medium">#{o.orderid}</td>
-                                <td className="py-4 px-6">{getCustomerName(o.customerid)}</td>
-                                <td className="py-4 px-6">{getProduct(o.productid)?.productname}</td>
-                                <td className="py-4 px-6 text-center font-bold">{o.quantity}</td>
-                                <td className="py-4 px-6 font-bold text-green-600">₱{o.price}</td>
-                                
-                                {/* Status Column */}
-                                <td className="py-4 px-6 text-center">
-                                    {o.is_paid ? (
-                                        <span className="bg-green-100 text-green-800 text-xs font-bold px-2.5 py-0.5 rounded">PAID</span>
-                                    ) : (
-                                        <span className="bg-yellow-100 text-yellow-800 text-xs font-bold px-2.5 py-0.5 rounded">PENDING</span>
-                                    )}
-                                </td>
+                        {groupedCheckouts.map((group, index) => {
+                            // THIS IS THE MAGIC LINE: It creates a visual 1, 2, 3 sequence
+                            const sequentialNumber = index + 1; 
+                            
+                            const firstOrder = group[0];
+                            const totalQty = group.reduce((sum, o) => sum + o.quantity, 0);
+                            const totalPrice = group.reduce((sum, o) => sum + Number(o.price), 0);
+                            
+                            const firstProductName = getProduct(firstOrder.productid)?.productname || "Unknown Item";
+                            const productDisplay = group.length > 1 ? `${firstProductName} (+${group.length - 1} items)` : firstProductName;
 
-                                {/* Actions Column */}
-                                <td className="py-4 px-6 text-center space-x-2 whitespace-nowrap">
-                                    {o.is_paid && (
+                            return (
+                                <tr key={firstOrder.orderid} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                    {/* Displays #1, #2, #3 instead of the database ID */}
+                                    <td className="py-4 px-6 font-semibold">{sequentialNumber}</td>
+                                    <td className="py-4 px-6 font-semibold">{getCustomerName(firstOrder.customerid)}</td>
+                                    <td className="py-4 px-6 text-slate-600 font-medium">{productDisplay}</td>
+                                    <td className="py-4 px-6 text-center font-bold bg-slate-50/50">{totalQty}</td>
+                                    <td className="py-4 px-6 font-black text-indigo-600">₱{totalPrice.toFixed(2)}</td>
+                                    
+                                    <td className="py-4 px-6 text-center">
+                                        {firstOrder.is_paid ? (
+                                            <span className="bg-emerald-100 text-emerald-800 text-xs font-black px-3 py-1 rounded-full border border-emerald-200">PAID</span>
+                                        ) : (
+                                            <span className="bg-amber-100 text-amber-800 text-xs font-black px-3 py-1 rounded-full border border-amber-200">PENDING</span>
+                                        )}
+                                    </td>
+
+                                    <td className="py-4 px-6 text-center space-x-2 whitespace-nowrap">
+                                        {firstOrder.is_paid && (
+                                            <button 
+                                                onClick={() => setViewingInvoice({ group, invoiceNumber: sequentialNumber })}
+                                                className="bg-slate-800 text-white px-4 py-2 rounded-xl font-bold hover:bg-slate-900 transition-colors text-xs shadow-sm"
+                                            >
+                                                View Invoice
+                                            </button>
+                                        )}
                                         <button 
-                                            onClick={() => setViewingInvoiceForOrder(o)}
-                                            className="bg-blue-500 text-white px-3 py-1 rounded font-bold hover:bg-blue-600 transition-colors text-xs"
+                                            onClick={() => handleDeleteGroup(group)} 
+                                            className="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-xl transition-colors font-bold text-xs border border-transparent hover:border-red-100"
                                         >
-                                            View Invoice
+                                            Delete
                                         </button>
-                                    )}
-                                    <button 
-                                        onClick={() => handleDelete(o.orderid!)} 
-                                        className="bg-red-500 text-white px-3 py-1 rounded font-bold hover:bg-red-600 transition-colors text-xs"
-                                    >
-                                        Delete
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
-                
-                {orders.length === 0 && (
-                    <div className="w-full text-center py-12 text-slate-500">
-                        No orders have been placed yet.
-                    </div>
-                )}
+                {orders.length === 0 && <div className="w-full text-center py-12 text-slate-400 font-medium">No orders have been placed yet.</div>}
             </div>
         </div>
     );

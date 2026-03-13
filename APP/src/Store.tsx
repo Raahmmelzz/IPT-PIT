@@ -11,8 +11,8 @@ import CartDrawer from './LayoutComponents/CartDrawer';
 import AuthModal from './LayoutComponents/AuthModal';
 import FlyingItem from './LayoutComponents/FlyingItem';
 import AdminPanel from './LayoutComponents/AdminPanel'; 
-import { PaymentTab } from './LayoutComponents/PaymentTab'; // <-- NEW IMPORT
-import { Invoice } from './LayoutComponents/Invoice';       // <-- NEW IMPORT
+import { PaymentTab } from './LayoutComponents/PaymentTab';
+import { Invoice } from './LayoutComponents/Invoice';       
 
 interface FlyingItemData { id: number; x: number; y: number; img: string; }
 
@@ -28,8 +28,9 @@ const Store: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [flyingItems, setFlyingItems] = useState<FlyingItemData[]>([]); 
 
-    // --- Checkout Flow State (NEW) ---
+    // --- Checkout Flow State ---
     const [checkoutState, setCheckoutState] = useState<'shopping' | 'payment' | 'invoice'>('shopping');
+    const [currentPaymentMethod, setCurrentPaymentMethod] = useState('GCash'); // <-- Tracks GCash/Maya for the store invoice
 
     // --- Auth State ---
     const [loggedInCustomer, setLoggedInCustomer] = useState<Customer | null>(null);
@@ -104,35 +105,35 @@ const Store: React.FC = () => {
         });
     };
 
-    // --- NEW CHECKOUT FLOW HANDLERS ---
+    // --- CHECKOUT FLOW HANDLERS ---
     
-    // 1. User clicks "Place Order" in the cart
     const handleInitiateCheckout = () => {
         if (!loggedInCustomer) { setIsAuthModalOpen(true); return; }
-        setIsCartOpen(false); // Close cart drawer
-        setCheckoutState('payment'); // Open payment tab
+        setIsCartOpen(false); 
+        setCheckoutState('payment'); 
     };
 
-    // 2. User successfully pays via the Payment Tab
-    const handlePaymentSuccess = async () => {
+    // Receives the selected method (GCash/Maya) from PaymentTab
+    const handlePaymentSuccess = async (method: string) => {
         try {
+            setCurrentPaymentMethod(method); // Save it so the Invoice can display it
             await Promise.all(cart.map(item => orderAPI.addOrder({
                 customerid: loggedInCustomer!.customerid!, 
                 productid: item.product.productid!,
                 quantity: item.quantity,
                 price: Number(item.product.price) * item.quantity,
-                is_paid: true // Tells the database it is paid
+                is_paid: true, 
+                payment_method: method // Saves to backend
             })));
-            setCheckoutState('invoice'); // Show the receipt
+            setCheckoutState('invoice'); 
         } catch (err) { 
             alert("Failed to process order on the server."); 
             setCheckoutState('shopping');
         }
     };
 
-    // 3. User closes the invoice
     const handleCloseInvoice = () => {
-        setCart([]); // Empty the cart only after they close the receipt
+        setCart([]); 
         setCheckoutState('shopping');
     };
 
@@ -140,7 +141,6 @@ const Store: React.FC = () => {
     const cartItemCount = cart.reduce((count, item) => count + item.quantity, 0);
     const filteredProducts = products.filter(p => p.productname.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    // Map cart items into the format the Invoice component expects
     const invoiceItems = cart.map(item => ({
         name: item.product.productname,
         quantity: item.quantity,
@@ -185,7 +185,7 @@ const Store: React.FC = () => {
                     <CartDrawer 
                         cart={cart} onClose={() => setIsCartOpen(false)} onRemove={(id) => setCart(prev => prev.filter(i => i.product.productid !== id))}
                         total={cartTotal} loggedInCustomer={loggedInCustomer} 
-                        onCheckout={handleInitiateCheckout} // <-- Updated to trigger payment flow
+                        onCheckout={handleInitiateCheckout} 
                         onOpenAuth={() => { setIsCartOpen(false); setIsAuthModalOpen(true); }}
                     />
                 )}
@@ -210,12 +210,13 @@ const Store: React.FC = () => {
 
             {/* Invoice Modal Overlay */}
             {checkoutState === 'invoice' && (
-                <div className="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex justify-center items-start pt-10 p-4 overflow-y-auto">
+                <div className="fixed inset-0 z-[60] bg-slate-50 flex justify-center items-start pt-10 p-4 overflow-y-auto">
                     <div className="w-full max-w-2xl relative">
                         <Invoice 
                             items={invoiceItems}
                             customerName={loggedInCustomer?.name}
                             subtotal={cartTotal}
+                            paymentMethod={currentPaymentMethod} // <-- THIS WAS MISSING! Now it passes GCash/Maya
                             onReset={handleCloseInvoice}
                         />
                     </div>

@@ -23,5 +23,6 @@ export interface Order {
     date?: string;
     quantity: number;
     price: string | number; 
-    is_paid?: boolean; // <-- NEW FIELD
+    is_paid?: boolean;
+    payment_method?: string; // <-- NEW FIELD
 }

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 interface PaymentTabProps {
   subtotal: number;
-  onPaymentSuccess: () => void;
+  onPaymentSuccess: (method: string) => void;
 }
 
 export const PaymentTab: React.FC<PaymentTabProps> = ({ subtotal, onPaymentSuccess }) => {
@@ -15,11 +15,9 @@ export const PaymentTab: React.FC<PaymentTabProps> = ({ subtotal, onPaymentSucce
   const handlePayment = (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
-    
-    // Simulate a short 1-second loading delay so it feels real
     setTimeout(() => {
       setIsProcessing(false);
-      onPaymentSuccess(); // This tells Store.tsx to switch to the Invoice screen
+      onPaymentSuccess(method); 
     }, 1000);
   };
 
@@ -50,9 +48,9 @@ export const PaymentTab: React.FC<PaymentTabProps> = ({ subtotal, onPaymentSucce
           onChange={(e) => setMethod(e.target.value)}
           className="w-full p-3 border border-slate-300 rounded-xl mb-6 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
         >
+          {/* Removed Cash on Delivery */}
           <option value="GCash">GCash</option>
           <option value="Maya">Maya</option>
-          <option value="Cash on Delivery">Cash on Delivery</option>
         </select>
 
         <button 

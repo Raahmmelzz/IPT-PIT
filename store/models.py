@@ -27,5 +27,6 @@ class Order(models.Model):
     productid = models.ForeignKey(Product, on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True)
     quantity = models.PositiveIntegerField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)  # Order-specific price
-    is_paid = models.BooleanField(default=False) # <-- NEW FIELD
+    price = models.DecimalField(max_digits=10, decimal_places=2) 
+    is_paid = models.BooleanField(default=False)
+    payment_method = models.CharField(max_length=50, default='Cash') # <-- NEW FIELD
