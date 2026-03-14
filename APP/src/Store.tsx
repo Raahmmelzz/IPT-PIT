@@ -10,7 +10,7 @@ import ProductGrid from './LayoutComponents/ProductGrid';
 import CartDrawer from './LayoutComponents/CartDrawer';
 import AuthModal from './LayoutComponents/AuthModal';
 import FlyingItem from './LayoutComponents/FlyingItem';
-import AdminPanel from './LayoutComponents/AdminPanel'; // New Import
+import AdminPanel from './LayoutComponents/AdminPanel';
 
 interface FlyingItemData { id: number; x: number; y: number; img: string; }
 
@@ -72,10 +72,11 @@ const Store: React.FC = () => {
         if (!signupData.username || !signupData.password) return;
         setIsLoadingAuth(true);
         try {
-            const res = await customerAPI.addCustomer(signupData);
-            setLoggedInCustomer(res.data);
-            setIsAuthModalOpen(false);
+            await customerAPI.addCustomer(signupData);
+            // ✅ Don't auto-login — redirect to login tab instead
             setSignupData({ name: '', username: '', email: '', number: '', password: '' });
+            setAuthMode('login');
+            alert(`Account created! Please log in, ${signupData.name || signupData.username}.`);
         } catch (err) { alert("Signup failed."); }
         finally { setIsLoadingAuth(false); }
     };

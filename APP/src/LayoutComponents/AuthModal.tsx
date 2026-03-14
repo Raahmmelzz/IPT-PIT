@@ -81,7 +81,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
     signupData, setSignupData, handleSignup
 }) => {
     const [step, setStep]                 = useState<'form' | 'otp'>('form');
-    const [showPassword, setShowPassword] = useState(false);
+    const [showPassword, setShowPassword]      = useState(false);
+    const [showLoginPassword, setShowLoginPassword] = useState(false);
     const [phoneOtp, setPhoneOtp]         = useState<string[]>(blank6());
     const [sentOtp, setSentOtp]           = useState('');
     const [otpError, setOtpError]         = useState('');
@@ -158,9 +159,15 @@ const AuthModal: React.FC<AuthModalProps> = ({
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Password</label>
-                            <input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
-                                className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800"
-                                onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
+                            <div className="relative">
+                                <input type={showLoginPassword ? 'text' : 'password'} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
+                                    className="w-full border border-slate-300 rounded-xl px-4 py-3 pr-11 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
+                                <button type="button" onClick={() => setShowLoginPassword(p => !p)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-indigo-500 hover:text-indigo-700 transition-colors select-none">
+                                    {showLoginPassword ? 'Hide' : 'Show'}
+                                </button>
+                            </div>
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button onClick={handleLogin} disabled={isLoading}
