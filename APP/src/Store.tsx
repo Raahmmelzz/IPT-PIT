@@ -78,10 +78,11 @@ const Store: React.FC = () => {
         if (!signupData.username || !signupData.password) return;
         setIsLoadingAuth(true);
         try {
-            const res = await customerAPI.addCustomer(signupData);
-            setLoggedInCustomer(res.data);
-            setIsAuthModalOpen(false);
+            await customerAPI.addCustomer(signupData);
+            // ✅ Don't auto-login — redirect to login tab instead
             setSignupData({ name: '', username: '', email: '', number: '', password: '' });
+            setAuthMode('login');
+            alert(`Account created! Please log in, ${signupData.name || signupData.username}.`);
         } catch (err) { alert("Signup failed."); }
         finally { setIsLoadingAuth(false); }
     };
