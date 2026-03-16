@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import type { Product, Customer } from './types'; 
+<<<<<<< HEAD
 import { productAPI, customerAPI } from './api'; 
+=======
+import { productAPI, orderAPI, customerAPI } from './api'; 
+>>>>>>> 7e2fc8879be1309ba35fd005ea4b9037186e0d56
 
 // Layout Components
 import Navbar from './LayoutComponents/Navbar';
@@ -11,7 +15,10 @@ import CartDrawer from './LayoutComponents/CartDrawer';
 import AuthModal from './LayoutComponents/AuthModal';
 import FlyingItem from './LayoutComponents/FlyingItem';
 import AdminPanel from './LayoutComponents/AdminPanel'; // New Import
+<<<<<<< HEAD
 import CheckoutPage from './CheckoutPage';
+=======
+>>>>>>> 7e2fc8879be1309ba35fd005ea4b9037186e0d56
 
 interface FlyingItemData { id: number; x: number; y: number; img: string; }
 
@@ -24,7 +31,10 @@ const Store: React.FC = () => {
     // --- Shopping State ---
     const [cart, setCart] = useState<{product: Product; quantity: number}[]>([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
+<<<<<<< HEAD
     const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+=======
+>>>>>>> 7e2fc8879be1309ba35fd005ea4b9037186e0d56
     const [searchQuery, setSearchQuery] = useState('');
     const [flyingItems, setFlyingItems] = useState<FlyingItemData[]>([]); 
 
@@ -103,8 +113,21 @@ const Store: React.FC = () => {
 
     const handleCheckout = async () => {
         if (!loggedInCustomer) { setIsAuthModalOpen(true); return; }
+<<<<<<< HEAD
         setIsCartOpen(false);
         setIsCheckoutOpen(true);
+=======
+        try {
+            await Promise.all(cart.map(item => orderAPI.addOrder({
+                customerid: loggedInCustomer.customerid!, 
+                productid: item.product.productid!,
+                quantity: item.quantity,
+                price: Number(item.product.price) * item.quantity 
+            })));
+            alert("Order placed!");
+            setCart([]); setIsCartOpen(false); 
+        } catch (err) { alert("Checkout failed."); }
+>>>>>>> 7e2fc8879be1309ba35fd005ea4b9037186e0d56
     };
 
     const cartTotal = cart.reduce((sum, item) => sum + (Number(item.product.price) * item.quantity), 0);
@@ -159,6 +182,7 @@ const Store: React.FC = () => {
                     signupData={signupData} setSignupData={setSignupData} handleSignup={handleSignup}
                 />
             )}
+<<<<<<< HEAD
 
             <AnimatePresence>
                 {isCheckoutOpen && (
@@ -171,6 +195,8 @@ const Store: React.FC = () => {
                     />
                 )}
             </AnimatePresence>
+=======
+>>>>>>> 7e2fc8879be1309ba35fd005ea4b9037186e0d56
         </div>
     );
 };
