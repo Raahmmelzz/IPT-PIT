@@ -29,7 +29,12 @@ const ProductGrid: React.FC<Props> = ({ products, searchQuery, onSearchChange, o
                             className="w-full bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl transition-shadow group flex flex-col"
                         >
                             <div className="h-48 w-full bg-slate-100 overflow-hidden relative">
-                                <img src={`https://picsum.photos/seed/${p.productid}/400/300`} alt={p.productname} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                <img 
+    // This tells React: "Use the uploaded image if it exists, otherwise use the placeholder"
+    src={p.image ? p.image : `https://picsum.photos/seed/${p.productid}/400/300`} 
+    alt={p.productname} 
+    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+/>
                             </div>
                             <div className="p-5 flex flex-col flex-grow">
                                 <h3 className="text-lg font-bold text-slate-800 mb-1">{p.productname}</h3>

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Customer, Order, Product } from '../types';
+import type { Customer, Invoice, Product } from '../types'; // <-- Swapped Order for Invoice
 import { AnimatePresence, motion } from 'framer-motion';
-import { orderAPI, productAPI } from '../api';
+import { invoiceAPI, productAPI } from '../api';            // <-- Swapped orderAPI for invoiceAPI
 
 interface NavbarProps {
     isManageMode: boolean;
@@ -15,7 +15,7 @@ interface NavbarProps {
 
 // ── Track Order Modal Body ─────────────────────────────────────────────────
 const TrackOrderBody: React.FC<{ loggedInCustomer: Customer | null }> = ({ loggedInCustomer }) => {
-    const [orders, setOrders]     = useState<Order[]>([]);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [products, setProducts] = useState<Record<number, Product>>({});
     const [loading, setLoading]   = useState(true);
     const [error, setError]       = useState('');
@@ -24,18 +24,21 @@ const TrackOrderBody: React.FC<{ loggedInCustomer: Customer | null }> = ({ logge
         const fetchData = async () => {
             if (!loggedInCustomer) { setLoading(false); return; }
             try {
-                const [ordersRes, productsRes] = await Promise.all([
-                    orderAPI.getOrders(),
+                const [invoicesRes, productsRes] = await Promise.all([
+                    invoiceAPI.getInvoices(),
                     productAPI.getProducts(),
                 ]);
-                // Filter orders for the logged-in customer
-                const myOrders = ordersRes.data.filter(
-                    (o: Order) => Number(o.customerid) === Number(loggedInCustomer.customerid)
+                
+                // Filter invoices for the logged-in customer
+                const myInvoices = invoicesRes.data.filter(
+                    (inv: Invoice) => Number(inv.customer) === Number(loggedInCustomer.customerid)
                 );
+                
                 // Map products by ID for easy lookup
                 const productMap: Record<number, Product> = {};
                 productsRes.data.forEach((p: Product) => { if (p.productid != null) productMap[p.productid] = p; });
-                setOrders(myOrders);
+                
+                setInvoices(myInvoices);
                 setProducts(productMap);
             } catch {
                 setError('Failed to load orders. Please try again.');
@@ -67,7 +70,7 @@ const TrackOrderBody: React.FC<{ loggedInCustomer: Customer | null }> = ({ logge
         </div>
     );
 
-    if (orders.length === 0) return (
+    if (invoices.length === 0) return (
         <div className="text-center py-8 space-y-2">
             <div className="text-4xl">🛒</div>
             <p className="text-sm font-bold text-slate-500">You have no orders yet.</p>
@@ -78,24 +81,31 @@ const TrackOrderBody: React.FC<{ loggedInCustomer: Customer | null }> = ({ logge
     return (
         <div className="space-y-3">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-                {orders.length} order{orders.length > 1 ? 's' : ''} found
+                {invoices.length} order{invoices.length > 1 ? 's' : ''} found
             </p>
-            {orders.map((order) => {
-                const product = order.productid != null ? products[Number(order.productid)] : undefined;
-                const date = order.date ? new Date(order.date) : null;
+            {invoices.map((invoice) => {
+                const date = invoice.date ? new Date(invoice.date) : null;
                 const formattedDate = date ? date.toLocaleDateString('en-PH', {
                     year: 'numeric', month: 'short', day: 'numeric'
                 }) : 'N/A';
+                
+                // Summarize items for the new Invoice structure
+                const totalQty = invoice.items.reduce((sum, item) => sum + item.quantity, 0);
+                const firstItem = invoice.items[0];
+                const firstProduct = firstItem ? products[firstItem.product] : null;
+                const productDisplayName = firstProduct ? firstProduct.productname : 'Unknown Product';
+                const moreItemsText = invoice.items.length > 1 ? ` (+${invoice.items.length - 1} more)` : '';
+
                 return (
-                    <div key={order.orderid} className="border border-slate-100 rounded-2xl p-4 space-y-3 hover:border-indigo-200 transition-colors">
+                    <div key={invoice.invoiceid} className="border border-slate-100 rounded-2xl p-4 space-y-3 hover:border-indigo-200 transition-colors">
                         {/* Order header */}
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-xs font-black text-slate-400 uppercase tracking-wide">Order</p>
-                                <p className="font-black text-slate-800 text-sm">#{order.orderid}</p>
+                                <p className="text-xs font-black text-slate-400 uppercase tracking-wide">Invoice</p>
+                                <p className="font-black text-slate-800 text-sm">#{invoice.invoiceid}</p>
                             </div>
-                            <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">
-                                🚚 Processing
+                            <span className={`text-xs font-bold px-3 py-1 rounded-full ${invoice.is_paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                {invoice.is_paid ? '✅ Paid' : '⏳ Pending'}
                             </span>
                         </div>
 
@@ -104,12 +114,12 @@ const TrackOrderBody: React.FC<{ loggedInCustomer: Customer | null }> = ({ logge
                             <span className="text-2xl">🛍️</span>
                             <div className="flex-1 min-w-0">
                                 <p className="font-bold text-slate-800 text-sm truncate">
-                                    {product ? product.productname : `Product #${order.productid}`}
+                                    {productDisplayName}{moreItemsText}
                                 </p>
-                                <p className="text-xs text-slate-500">Qty: {order.quantity}</p>
+                                <p className="text-xs text-slate-500">Total Qty: {totalQty}</p>
                             </div>
                             <p className="font-black text-indigo-600 text-sm shrink-0">
-                                ₱{Number(order.price).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                                ₱{Number(invoice.total).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                             </p>
                         </div>
 

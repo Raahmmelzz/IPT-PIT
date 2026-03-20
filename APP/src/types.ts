@@ -1,28 +1,35 @@
-// src/types.ts
-
+// types.ts
 export interface Customer {
-    customerid?: number; 
+    customerid?: number;
     name: string;
-    username: string; // <-- This is the missing piece!
+    username: string;
     email: string;
     number: string;
-    password?: string; // Optional so we don't accidentally display it everywhere
+    password?: string;
 }
 
 export interface Product {
-    imageurl: string;
     productid?: number;
     productname: string;
-    price: string | number; // APIs often return DecimalField as a string
+    price: string | number;
+    image?: string;
 }
 
-export interface Order {
-    orderid?: number; 
-    customerid: number; 
-    productid: number;  
-    date?: string;
+// --- NEW INVOICE TYPES ---
+export interface InvoiceItem {
+    product: number; // The product ID
     quantity: number;
-    price: string | number; 
-    is_paid?: boolean;
-    payment_method?: string; // <-- NEW FIELD
+    price_at_purchase?: string | number; // Returned by backend
+}
+
+export interface Invoice {
+    invoiceid?: number;
+    customer: number; // The customer ID
+    date?: string;
+    is_paid: boolean;
+    payment_method: string;
+    subtotal?: string | number; // Calculated by backend
+    tax?: string | number;      // Calculated by backend
+    total?: string | number;    // Calculated by backend
+    items: InvoiceItem[];       // Array of items in this invoice
 }
