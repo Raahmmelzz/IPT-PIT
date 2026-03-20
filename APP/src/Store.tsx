@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import type { Product, Customer } from './types'; 
-import { productAPI, orderAPI, customerAPI } from './api'; 
+
+import type { Product, Customer, Invoice as InvoiceType } from './types'; 
+import { productAPI, customerAPI, invoiceAPI } from './api'; 
 
 // Layout Components
 import Navbar from './LayoutComponents/Navbar';
@@ -12,7 +13,7 @@ import AuthModal from './LayoutComponents/AuthModal';
 import FlyingItem from './LayoutComponents/FlyingItem';
 import AdminPanel from './LayoutComponents/AdminPanel'; 
 import { PaymentTab } from './LayoutComponents/PaymentTab';
-import { Invoice } from './LayoutComponents/Invoice';       
+import { Invoice } from './LayoutComponents/Invoice';    
 
 interface FlyingItemData { id: number; x: number; y: number; img: string; }
 
@@ -20,7 +21,7 @@ const Store: React.FC = () => {
     // --- Data & Mode State ---
     const [products, setProducts] = useState<Product[]>([]);
     const [isManageMode, setIsManageMode] = useState(false);
-    const [adminTab, setAdminTab] = useState<'products' | 'customers' | 'orders'>('products');
+    const [adminTab, setAdminTab] = useState<'products' | 'customers' | 'invoices'>('products');
     
     // --- Shopping State ---
     const [cart, setCart] = useState<{product: Product; quantity: number}[]>([]);
@@ -30,7 +31,10 @@ const Store: React.FC = () => {
 
     // --- Checkout Flow State ---
     const [checkoutState, setCheckoutState] = useState<'shopping' | 'payment' | 'invoice'>('shopping');
-    const [currentPaymentMethod, setCurrentPaymentMethod] = useState('GCash'); // <-- Tracks GCash/Maya for the store invoice
+    const [currentPaymentMethod, setCurrentPaymentMethod] = useState('GCash');
+    
+    // ✅ FIX 1: New state to hold the snapshot of the cart for the invoice
+    const [invoiceSnapshot, setInvoiceSnapshot] = useState<{name: string; quantity: number; price: number}[]>([]);
 
     // --- Auth State ---
     const [loggedInCustomer, setLoggedInCustomer] = useState<Customer | null>(null);
@@ -79,7 +83,6 @@ const Store: React.FC = () => {
         setIsLoadingAuth(true);
         try {
             await customerAPI.addCustomer(signupData);
-            // ✅ Don't auto-login — redirect to login tab instead
             setSignupData({ name: '', username: '', email: '', number: '', password: '' });
             setAuthMode('login');
             alert(`Account created! Please log in, ${signupData.name || signupData.username}.`);
@@ -93,7 +96,7 @@ const Store: React.FC = () => {
             id: Date.now(),
             x: e.clientX,
             y: e.clientY,
-            img: product.imageurl || `https://picsum.photos/seed/${product.productid}/100/100`
+            img: product.image || `https://picsum.photos/seed/${product.productid}/100/100`
         };
         setFlyingItems(prev => [...prev, newItem]);
 
@@ -107,29 +110,50 @@ const Store: React.FC = () => {
     };
 
     // --- CHECKOUT FLOW HANDLERS ---
-    
     const handleInitiateCheckout = () => {
         if (!loggedInCustomer) { setIsAuthModalOpen(true); return; }
         setIsCartOpen(false); 
         setCheckoutState('payment'); 
     };
 
-    // Receives the selected method (GCash/Maya) from PaymentTab
     const handlePaymentSuccess = async (method: string) => {
+        if (!loggedInCustomer || !loggedInCustomer.customerid) {
+            alert("Please log in to checkout.");
+            return;
+        }
+
+        const payloadItems = cart.map(item => ({
+            product: item.product.productid!,
+            quantity: item.quantity
+        }));
+
+        const invoicePayload: InvoiceType = {
+            customer: loggedInCustomer.customerid,
+            is_paid: true,
+            payment_method: method,
+            items: payloadItems 
+        };
+
         try {
-            setCurrentPaymentMethod(method); // Save it so the Invoice can display it
-            await Promise.all(cart.map(item => orderAPI.addOrder({
-                customerid: loggedInCustomer!.customerid!, 
-                productid: item.product.productid!,
+            await invoiceAPI.createInvoice(invoicePayload);
+            
+            // ✅ FIX 2: Take a snapshot of the cart data BEFORE clearing it
+            const receiptItems = cart.map(item => ({
+                name: item.product.productname,
                 quantity: item.quantity,
-                price: Number(item.product.price) * item.quantity,
-                is_paid: true, 
-                payment_method: method // Saves to backend
-            })));
-            setCheckoutState('invoice'); 
-        } catch (err) { 
-            alert("Failed to process order on the server."); 
-            setCheckoutState('shopping');
+                price: Number(item.product.price)
+            }));
+            
+            // Save snapshot and payment method to state
+            setInvoiceSnapshot(receiptItems);
+            setCurrentPaymentMethod(method);
+
+            setCheckoutState('invoice'); // Move to invoice screen
+            setCart([]); // Clear cart safely
+            
+        } catch (err) {
+            console.error("Checkout failed:", err);
+            alert("Checkout failed. Please try again.");
         }
     };
 
@@ -142,11 +166,7 @@ const Store: React.FC = () => {
     const cartItemCount = cart.reduce((count, item) => count + item.quantity, 0);
     const filteredProducts = products.filter(p => p.productname.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const invoiceItems = cart.map(item => ({
-        name: item.product.productname,
-        quantity: item.quantity,
-        price: Number(item.product.price)
-    }));
+    // ✅ FIX 3: Removed the old "invoiceItems" array mapping from here since we use state now.
 
     return (
         <div className="min-h-screen w-full bg-slate-50 flex justify-center overflow-x-hidden relative font-sans">
@@ -214,10 +234,11 @@ const Store: React.FC = () => {
                 <div className="fixed inset-0 z-[60] bg-slate-50 flex justify-center items-start pt-10 p-4 overflow-y-auto">
                     <div className="w-full max-w-2xl relative">
                         <Invoice 
-                            items={invoiceItems}
+                            // ✅ FIX 4: Use the new invoiceSnapshot state here!
+                            items={invoiceSnapshot}
                             customerName={loggedInCustomer?.name}
-                            subtotal={cartTotal}
-                            paymentMethod={currentPaymentMethod} // <-- THIS WAS MISSING! Now it passes GCash/Maya
+                            subtotal={invoiceSnapshot.reduce((total, item) => total + (item.price * item.quantity), 0)}
+                            paymentMethod={currentPaymentMethod}
                             onReset={handleCloseInvoice}
                         />
                     </div>
