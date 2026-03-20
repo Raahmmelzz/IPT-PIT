@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Product, Customer } from './types';
-import { orderAPI } from './api';
+import { invoiceAPI } from './api';
 
 // Sub-components
 import CheckoutOrderSummary from './LayoutComponents/CheckoutOrderSummary';
@@ -13,7 +13,7 @@ interface CheckoutPageProps {
     cart: { product: Product; quantity: number }[];
     loggedInCustomer: Customer | null;
     onClose: () => void;
-    onOrderComplete: () => void;
+    onOrderComplete: (orderSummary: any) => void; 
     onOpenAuth: () => void;
 }
 
@@ -27,7 +27,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
     const [step, setStep] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
-    const [invoiceNumber] = useState(`INV-${Date.now().toString().slice(-6)}`);
+    const [invoiceNumber, setInvoiceNumber] = useState('');
 
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
     const [amountPaid, setAmountPaid] = useState('');
@@ -56,31 +56,59 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
     };
 
     const handlePlaceOrder = async () => {
-        if (!loggedInCustomer) { onOpenAuth(); return; }
-        setIsLoading(true);
-        try {
-            await Promise.all(cart.map(item =>
-                orderAPI.addOrder({
-                    customerid: loggedInCustomer.customerid!,
-                    productid: item.product.productid!,
-                    quantity: item.quantity,
-                    price: Number(item.product.price) * item.quantity,
-                })
-            ));
-            setIsSuccess(true);
-        } catch {
-            alert('Order failed. Please try again.');
-        } finally {
-            setIsLoading(false);
+    if (!loggedInCustomer || !loggedInCustomer.customerid) return;
+    setIsLoading(true);
+
+    try {
+        const invoiceData: any = {
+            customer: loggedInCustomer.customerid, 
+            // ROUND THESE THREE VALUES:
+            totalamount: Number(total.toFixed(2)),
+            amount_paid: Number(Number(amountPaid).toFixed(2)),
+            change: Number(Number(change).toFixed(2)),
+            
+            payment_method: paymentMethod,
+            is_paid: true,
+            items: cart.map(item => ({
+                product: item.product.productid,
+                quantity: item.quantity,
+                // ALSO ROUND THE UNIT PRICE JUST IN CASE:
+                unitprice: Number(Number(item.product.price).toFixed(2))
+            }))
+        };
+
+        // 1. Save the response from Django
+        const response = await invoiceAPI.createInvoice(invoiceData);
+
+        // 2. Grab the REAL ID from the database and update the state
+        // (Assuming Django returns the ID in response.data.id)
+        if (response.data && response.data.id) {
+            setInvoiceNumber(`INV-${response.data.id}`);
+        } else {
+            // Fallback just in case
+            setInvoiceNumber(`INV-${Date.now().toString().slice(-6)}`); 
         }
-    };
+
+        // 3. Show the success screen now that we have the real ID
+        setIsSuccess(true);
+
+    } catch (err: any) {
+        console.error("Django Error:", err.response?.data || err);
+        alert("Failed to save order.");
+    } finally {
+        setIsLoading(false);
+    }
+};
 
     const canProceed = () => {
         if (step === 1 && !loggedInCustomer) return false;
-        if (step === 2 && paymentMethod === 'cash' && (Number(amountPaid) < total || !amountPaid)) return false;
+        if (step === 2 && paymentMethod === 'cash') {
+            if (Number(amountPaid) < total || !amountPaid) return false;
+        }
         return true;
     };
 
+    // ✅ FIXED BLOCK: Passing the correct data object back to Store.tsx via onOrderComplete
     if (isSuccess) {
         return (
             <CheckoutSuccess
@@ -94,7 +122,15 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 paymentMethod={paymentMethod}
                 amountPaid={Number(amountPaid)}
                 change={change}
-                onDone={onOrderComplete}
+                onDone={() => {
+                    // This creates the summary object that Store.tsx's lastOrderData needs
+                    onOrderComplete({
+                        total: total,
+                        method: paymentMethod,
+                        amountPaid: Number(amountPaid),
+                        change: change
+                    });
+                }}
             />
         );
     }

@@ -65,6 +65,8 @@ const ManageOrders: React.FC = () => {
                         customerName={getCustomerName(viewingInvoice.customer)}
                         subtotal={Number(viewingInvoice.subtotal)}
                         invoiceNumber={viewingInvoice.invoiceid}
+                        amountPaid={Number(viewingInvoice.amount_paid)}
+                        change={Number(viewingInvoice.change)}
                         paymentMethod={viewingInvoice.payment_method}
                         onReset={() => setViewingInvoice(null)}
                     />
@@ -87,6 +89,10 @@ const ManageOrders: React.FC = () => {
                             <th className="py-3 px-6 font-bold">Items Summary</th>
                             <th className="py-3 px-6 font-bold text-center">Total Qty</th>
                             <th className="py-3 px-6 font-bold">Total Price</th>
+                            {/* --- NEW COLUMNS ADDED HERE --- */}
+                            <th className="py-3 px-6 font-bold text-green-600">Paid</th>
+                            <th className="py-3 px-6 font-bold text-indigo-600">Change</th>
+                            {/* ------------------------------ */}
                             <th className="py-3 px-6 font-bold text-center">Status</th>
                             <th className="py-3 px-6 font-bold text-center">Actions</th>
                         </tr>
@@ -107,6 +113,11 @@ const ManageOrders: React.FC = () => {
                                     <td className="py-4 px-6 text-slate-600 font-medium">{productDisplay}</td>
                                     <td className="py-4 px-6 text-center font-bold bg-slate-50/50">{totalQty}</td>
                                     <td className="py-4 px-6 font-black text-indigo-600">₱{Number(inv.total).toFixed(2)}</td>
+                                    
+                                    {/* --- NEW DATA CELLS ADDED HERE --- */}
+                                    <td className="py-4 px-6 font-bold text-green-600">₱{Number(inv.amount_paid).toFixed(2)}</td>
+                                    <td className="py-4 px-6 font-bold text-indigo-600">₱{Number(inv.change).toFixed(2)}</td>
+                                    {/* --------------------------------- */}
                                     
                                     <td className="py-4 px-6 text-center">
                                         {inv.is_paid ? (

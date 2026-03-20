@@ -161,9 +161,9 @@ const HELP_CONTENT: Record<string, { icon: string; title: string; body: React.Re
                 <p>Our support team is based in Cagayan de Oro and ready to help you with any concern!</p>
                 <div className="space-y-2">
                     {[
-                        { icon: '📧', label: 'Email',    value: 'support@hengstore.ph',   sub: 'Response within 24 hours' },
+                        { icon: '📧', label: 'Email',    value: 'support@gstop.ph',   sub: 'Response within 24 hours' },
                         { icon: '📞', label: 'Phone',    value: '+63 917 123 4567',        sub: 'Mon–Sat, 8AM–6PM' },
-                        { icon: '💬', label: 'Facebook', value: 'fb.com/hengstore',        sub: 'Usually replies instantly' },
+                        { icon: '💬', label: 'Facebook', value: 'fb.com/gstop',        sub: 'Usually replies instantly' },
                         { icon: '📍', label: 'Location', value: 'Cagayan de Oro City',     sub: 'Misamis Oriental, PH' },
                     ].map(({ icon, label, value, sub }) => (
                         <div key={label} className="flex items-center gap-3 bg-slate-50 rounded-xl p-3">
@@ -193,7 +193,7 @@ const HELP_CONTENT: Record<string, { icon: string; title: string; body: React.Re
                     { q: 'Can I cancel my order?', a: 'Yes, orders can be cancelled within 1 hour of placement. After that, please contact support as the order may already be packed.' },
                     { q: 'Do you ship nationwide?', a: 'Yes! We ship to all provinces in the Philippines. Delivery times vary by location — Metro areas get faster delivery.' },
                     { q: 'Is my payment information secure?', a: 'Absolutely. All transactions are encrypted and we never store your card details on our servers.' },
-                    { q: 'How do I contact support?', a: 'You can reach us via email at support@hengstore.ph, call +63 917 123 4567, or message us on Facebook.' },
+                    { q: 'How do I contact support?', a: 'You can reach us via email at support@gstop.ph, call +63 917 123 4567, or message us on Facebook.' },
                 ].map(({ q, a }) => (
                     <div key={q} className="bg-slate-50 rounded-xl p-3">
                         <p className="font-bold text-slate-800 mb-1 text-xs">❓ {q}</p>
@@ -210,7 +210,7 @@ const SAMPLE_NOTIFICATIONS = [
     { id: 1, icon: '🛍️', title: 'Order Confirmed', message: 'Your order #1042 has been confirmed.', time: '2m ago', read: false },
     { id: 2, icon: '🚚', title: 'Out for Delivery', message: 'Your order #1039 is on its way!', time: '1h ago', read: false },
     { id: 3, icon: '✅', title: 'Order Delivered', message: 'Order #1035 was delivered successfully.', time: '2d ago', read: true },
-    { id: 4, icon: '🎉', title: 'Welcome to Hengstore!', message: 'Thanks for signing up. Enjoy shopping!', time: '5d ago', read: true },
+    { id: 4, icon: '🎉', title: 'Welcome to G-stop!', message: 'Thanks for signing up. Enjoy shopping!', time: '5d ago', read: true },
 ];
 
 const Navbar: React.FC<NavbarProps> = ({
@@ -246,16 +246,12 @@ const Navbar: React.FC<NavbarProps> = ({
             <nav className="w-full flex justify-between items-center py-6">
                 {/* Logo */}
                 <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-black text-xl shadow-lg shadow-indigo-200">H</div>
-                    <h1 className="text-2xl font-black text-slate-800 tracking-tight">Hengstore</h1>
+                    <div className="h-10 w-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-black text-xl shadow-lg shadow-indigo-200">G</div>
+                    <h1 className="text-2xl font-black text-white tracking-tight">G-Stop</h1>
                 </div>
 
                 {/* Actions */}
                 <div className="flex gap-3 items-center">
-                    <button onClick={onToggleAdmin}
-                        className={`px-5 py-2 text-sm font-bold transition-colors ${isManageMode ? 'text-indigo-600' : 'text-slate-500 hover:text-indigo-600'}`}>
-                        {isManageMode ? "Return to Store" : "Admin Login"}
-                    </button>
 
                     {!isManageMode && (
                         <>
@@ -358,8 +354,8 @@ const Navbar: React.FC<NavbarProps> = ({
                             {loggedInCustomer ? (
                                 <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
                                     <div className="text-right hidden sm:block">
-                                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Logged in as</p>
-                                        <p className="text-sm font-bold text-slate-800">{loggedInCustomer.name}</p>
+                                        <p className="text-xs text-slate-500 font-bold text-white uppercase tracking-wider">Logged in as</p>
+                                        <p className="text-sm font-bold text-white text-slate-800">{loggedInCustomer.name}</p>
                                     </div>
                                     <button onClick={onLogout} className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition-colors">
                                         Logout
@@ -367,7 +363,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                 </div>
                             ) : (
                                 <button onClick={onOpenAuth} className="px-5 py-2 text-sm font-bold bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors">
-                                    Customer Login
+                                    Login
                                 </button>
                             )}
 

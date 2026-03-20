@@ -31,5 +31,7 @@ export interface Invoice {
     subtotal?: string | number; // Calculated by backend
     tax?: string | number;      // Calculated by backend
     total?: string | number;    // Calculated by backend
-    items: InvoiceItem[];       // Array of items in this invoice
+    items: InvoiceItem[];
+    amount_paid?: number | string; 
+    change?: number | string;       // Array of items in this invoice
 }

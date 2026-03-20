@@ -24,7 +24,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Invoice
-        fields = ['invoiceid', 'customer', 'date', 'is_paid', 'payment_method', 'subtotal', 'tax', 'total', 'items']
+        fields = ['invoiceid', 'customer', 'date', 'is_paid', 'payment_method', 'subtotal', 'tax', 'total', 'amount_paid', 'change', 'items']
         # Frontend cannot dictate totals. We calculate them.
         read_only_fields = ['subtotal', 'tax', 'total', 'date']
 
@@ -63,6 +63,12 @@ class InvoiceSerializer(serializers.ModelSerializer):
         invoice.subtotal = subtotal
         invoice.tax = tax
         invoice.total = total
+        
+
+        paid = validated_data.get('amount_paid', Decimal('0.00'))
+        invoice.amount_paid = paid
+        invoice.change = paid - total
+        
         invoice.save()
         
         return invoice

@@ -31,5 +31,5 @@ export const invoiceAPI = {
     getInvoice: (id: number) => axios.get(`${API_URL}invoices/${id}/`),
     createInvoice: (data: Invoice) => axios.post(`${API_URL}invoices/`, data),
     updateInvoice: (id: number, data: any) => axios.put(`${API_URL}invoices/${id}/`, data),
-    deleteInvoice: (id: number) => axios.delete(`${API_URL}invoices/${id}/`)
+    deleteInvoice: (id: number) => axios.delete(`${API_URL}invoices/${id}/`),
 };

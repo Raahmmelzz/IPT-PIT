@@ -101,7 +101,7 @@ const ManageProducts: React.FC<Props> = ({ products, refresh }) => {
                                                 className="text-xs w-48"
                                             />
                                         </div>
-                                    ) : `$${p.price}`}
+                                    ) : `₱${p.price}`}
                                 </td>
                                 <td className="py-4 px-6 text-center">
                                     {editingId === p.productid ? (
