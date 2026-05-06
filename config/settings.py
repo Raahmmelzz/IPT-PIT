@@ -37,8 +37,11 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'cloudinary_storage', # Added for Cloudinary
     'django.contrib.staticfiles',
+    'cloudinary',         # Added for Cloudinary
     'rest_framework',
+    'djoser',             # Added for email authentication handling
     'store',
 ]
 
@@ -58,7 +61,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'], # Updated to find your custom email template
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -130,3 +133,56 @@ CORS_ALLOWED_ORIGINS = [
 ]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# ==========================================
+# 1. CLOUDINARY MEDIA STORAGE CONFIGURATION
+# ==========================================
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': '123',
+    'API_KEY': '123',
+    'API_SECRET': '_123',
+}
+
+# Note: DEFAULT_FILE_STORAGE is deprecated in modern Django. Use STORAGES instead.
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+# ==========================================
+# 2. EMAIL BACKEND CONFIGURATION (SMTP)
+# ==========================================
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'rulona.nick@gmail.com'           # Update with actual email
+EMAIL_HOST_PASSWORD = 'etws wxok clzt jhez'     # Update with your Google App Password
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = 'rulona.nick@gmail.com'        # Update with actual email
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+}
+
+# ==========================================
+# 3. DJOSER CONFIGURATION
+# ==========================================
+DJOSER = {
+    'SEND_ACTIVATION_EMAIL': True,
+    'USER_CREATE_PASSWORD_RETYPE': True,
+    'ACTIVATION_URL': 'activate/{uid}/{token}',
+    'EMAIL': {
+        # This tells Djoser to use the custom class you define in step 2 below
+        'activation': 'store.emails.CustomActivationEmail',
+    }
+}
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+)
