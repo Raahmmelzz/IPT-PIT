@@ -9,8 +9,7 @@ class Customer(models.Model):
     number = models.CharField(max_length=20)
     # Note: For a real app, use Django's built-in User model for hashed passwords! 
     # But for a school project, this plaintext setup might be okay to keep it simple.
-    password = models.CharField(max_length=255)
-    profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    password = models.CharField(max_length=255) 
 
     def __str__(self):
         return self.username
@@ -38,6 +37,7 @@ class Invoice(models.Model):
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     tax = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    change = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
         return f"Invoice #{self.invoiceid} - {self.customer.username}"
